@@ -1,43 +1,67 @@
 # OpenSystem1 Classifier
 
-An experiment comparing two non-generative, zero-shot ways to make typed decisions over structured state:
+An independent smoke test of TypeSafe.ai JEV's newly published System One claims
+against a local classifier we already know: ModernBERT NLI. The comparison uses
+two non-generative, zero-shot ways to make typed decisions over structured state:
 
 1. A local Natural Language Inference classifier using [ModernBERT-large-zeroshot-v2.0](https://huggingface.co/MoritzLaurer/ModernBERT-large-zeroshot-v2.0).
 2. The hosted [TypeSafe System One API](https://docs.typesafe.ai/api), using the TypeSafe.ai JEV model.
 
 Both implementations answer the same 12 multiple-choice questions. They return only declared options and probability distributions. Neither path generates an unrestricted answer.
 
+## Why this comparison now
+
+On September 14, 2026, TypeSafe.ai [announced JEV in early access](https://typesafe.ai/blog/introducing-system-one-models-and-jev),
+describing it as the first of its System One models: models specialized for
+fast, typed decisions rather than open-ended text generation. The current
+[model documentation](https://docs.typesafe.ai/models) identifies the tested
+version as JEV 1.13.0.
+
+The announcement makes four practical claims worth testing. The language below
+summarizes TypeSafe.ai's claims; it is not an independent endorsement.
+
+| Claim | What TypeSafe.ai publishes | What this repository tests |
+|---|---|---|
+| Process decisions all at once | A single state can be evaluated against multiple independent typed questions in one request, with the outputs computed in parallel. The [primitives documentation](https://docs.typesafe.ai/primitives) says adding questions barely changes latency beyond their input-token cost. | The current smoke tests validate typed outputs and probabilities. Because each benchmark case has its own state, they do **not yet** independently verify the one-state/many-question fan-out claim. |
+| Fast | The launch post reports typical latency of 70–500 ms and claims 40–200× faster responses for comparable System One queries. | Raw request latency is captured, but this is not yet a controlled, hardware-normalized latency benchmark against local ModernBERT. |
+| Cheap | The published price is $0.042 per million input tokens, with no output-token charge. The launch post also reports a much larger workflow-level saving under its stated methodology. | Token use is recorded for JEV. This repository does not treat the vendor's workflow-level cost multiple as independently reproduced. |
+| High quality | TypeSafe.ai claims intelligence comparable to existing LLMs on tasks shaped as System One decisions, with structured probability outputs. | We directly test top-ranked correctness, distance from the correct answer, and top-two separation on 12 multiple-choice and 30 BFCL-derived routing cases. This is evidence for these cases, not a general quality or calibration claim. |
+
+ModernBERT provides a useful known baseline: it is a local, inspectable encoder
+classifier that can rank natural-language labels without generating text. The
+question here is deliberately narrow: when both systems are asked to make the
+same constrained decision, does JEV's quality hold up, and what do its reported
+probabilities look like beside the established local approach?
+
 ## Benchmark result
 
 | Measure | ModernBERT NLI | TypeSafe.ai JEV 1.13.0 |
 |---|---:|---:|
 | Correct top-ranked answers | 12/12 | 12/12 |
-| Cleared the shared decision gate | 5/12 | 12/12 |
 | Accuracy | 100% | 100% |
-| Gate clearance | 41.7% | 100% |
+| Average clearance | 0.0% | 0.0% |
+| Average top-two margin | 38.4% | 100.0% |
 
-The shared gate requires a top probability of at least `0.65` and a top-two margin of at least `0.15`.
-
-The presentation also reports a signed gate-clearance distance for each case:
+The presentation uses these definitions:
 
 ```text
-min(top_probability - 0.65, top_two_margin - 0.15)
+clearance = probability(chosen answer) - probability(correct answer)
+margin = average(probability(chosen answer) - probability(next-best answer))
 ```
 
-Positive values clear both conditions. Negative values report the shortfall on
-the limiting condition. Accuracy and clearance measure different things: a
-top-ranked answer can be correct while still falling below the probability or
-margin required for automatic action. The charts show the full distribution in
-fixed 20-percentage-point bins.
+Clearance is zero when the chosen answer is correct. A positive value means an
+incorrect option outranked the correct answer, so lower clearance is better.
+Margin measures how far the selected option is ahead of the runner-up, so a
+higher average margin indicates more separation.
 
-TypeSafe.ai JEV returned literal `1.0` / `0.0` probability distributions and `confidence: 1.0` for all 12 cases. The client did not round or threshold those responses. The POC calculates the top-two margin locally after receiving the API response. This easy benchmark demonstrates separation on gate clearance, but it does not establish real-world calibration.
+TypeSafe.ai JEV returned literal `1.0` / `0.0` probability distributions and `confidence: 1.0` for all 12 cases. The client did not round or threshold those responses. The POC calculates margin and clearance locally after receiving the API response. This easy benchmark demonstrates separation in reported probabilities, but it does not establish real-world calibration.
 
-![Simple multiple-choice accuracy and gate-clearance histograms comparing ModernBERT and TypeSafe.ai JEV](docs/images/simple-multiple-choice-results.png)
+![Simple multiple-choice accuracy, correct-answer clearance, and average margin comparing ModernBERT and TypeSafe.ai JEV](docs/images/simple-multiple-choice-results.png)
 
 The original 12-question presentation is in
 [`results/OpenSystem1-classifier-comparison.pptx`](results/OpenSystem1-classifier-comparison.pptx).
 The current smoke-test deck, including the BFCL-derived Stage-1 results,
-clearance histograms, and category-level gate counts, is
+clearance distributions, and average margins, is
 [`results/Smoke-Test-Comparison-System1-vs-ModernBERT-clearance-distributions.pptx`](results/Smoke-Test-Comparison-System1-vs-ModernBERT-clearance-distributions.pptx).
 
 ## Stage 1: BFCL-derived tool routing
@@ -52,12 +76,14 @@ callable. It uses 30 cases derived from the official BFCL V4 data at commit
 | Overall routing accuracy | 23/30 (76.7%) | 29/30 (96.7%) |
 | Multiple-function selection | 17/20 (85%) | 20/20 (100%) |
 | No-tool detection | 6/10 (60%) | 9/10 (90%) |
-| Cleared the unchanged decision gate | 0/30 | 30/30 |
+| Average clearance | 0.6% | 1.5% |
+| Average top-two margin | 8.7% | 95.4% |
 
 The TypeSafe.ai JEV responses were not uniformly `1.0` on this harder set: 25 of 30
 had a top probability of `1.0`; the remaining five ranged from `0.70` to `0.97`.
-Its one wrong route still cleared the gate at `0.72`, which is a useful reminder
-that thresholding controls abstention rather than guaranteeing correctness.
+Its one wrong route assigned `0.72` to the selected tool and `0.28` to the
+correct no-tool option, producing a 44-point clearance. This is why lower
+clearance is better under the definition used here.
 
 This is a **BFCL-derived routing benchmark, not an official BFCL leaderboard
 score**. Official AST and executable evaluation also requires argument
@@ -65,7 +91,7 @@ generation and execution, which neither classifier performs by itself. See
 [`docs/bfcl-routing-benchmark.md`](docs/bfcl-routing-benchmark.md) for the
 protocol and interpretation.
 
-![BFCL-derived tool-routing accuracy and gate-clearance histograms comparing ModernBERT and TypeSafe.ai JEV](docs/images/tool-calling-results.png)
+![BFCL-derived tool-routing accuracy, correct-answer clearance, and average margin comparing ModernBERT and TypeSafe.ai JEV](docs/images/tool-calling-results.png)
 
 ## Architecture
 
@@ -85,7 +111,7 @@ poc/
   bfcl_routing_benchmark.py       Shared ModernBERT / TypeSafe routing runner
   test_bfcl_routing_benchmark.py  Dataset and metric tests
   update_deck_bfcl_routing.mjs    Editable PowerPoint update
-  rebuild_smoke_test_deck.mjs     Reordered smoke-test deck and clearance histograms
+  rebuild_smoke_test_deck.mjs     Reordered deck, clearance distributions, and margins
   zero_shot_decision_poc.py       Local typed decision engine
   obvious_answers_benchmark.py    Shared 12-question benchmark
   typesafe_decision_poc.py        TypeSafe HTTP client
