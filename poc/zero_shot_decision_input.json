@@ -1,0 +1,71 @@
+{
+  "state": {
+    "ticket_text": "I was charged twice and need help today.",
+    "transaction_type": "card charge",
+    "amount_usd": 130,
+    "previous_tickets": 2,
+    "account_tier": "enterprise"
+  },
+  "decisions": [
+    {
+      "id": "owning_team",
+      "kind": "choice",
+      "question": "Which team should resolve this customer issue?",
+      "minimum_probability": 0.65,
+      "minimum_margin": 0.15,
+      "review_option_id": "needs_review",
+      "options": [
+        {
+          "id": "billing",
+          "description": "Duplicate charges, payments, refunds, invoices, and payment disputes."
+        },
+        {
+          "id": "technical",
+          "description": "Product errors, access problems, outages, defects, and integrations."
+        },
+        {
+          "id": "sales",
+          "description": "Contracts, upgrades, purchases, account plans, and pricing discussions."
+        },
+        {
+          "id": "needs_review",
+          "description": "Available evidence is insufficient to assign a responsible team safely."
+        }
+      ]
+    },
+    {
+      "id": "same_day_action",
+      "kind": "boolean",
+      "question": "Does this ticket require same-day action?",
+      "true_description": "The customer issue requires a same-day response because it concerns a duplicated charge and expresses urgency.",
+      "minimum_probability": 0.80
+    },
+    {
+      "id": "urgency",
+      "kind": "score",
+      "question": "What urgency level should this ticket receive?",
+      "levels": [
+        {
+          "id": "routine",
+          "value": 0,
+          "description": "Routine: respond within two business days."
+        },
+        {
+          "id": "elevated",
+          "value": 1,
+          "description": "Elevated: respond within one business day."
+        },
+        {
+          "id": "high",
+          "value": 2,
+          "description": "High: provide a same-day response."
+        },
+        {
+          "id": "critical",
+          "value": 3,
+          "description": "Critical: immediately escalate an active, severe, or safety-impacting incident."
+        }
+      ]
+    }
+  ]
+}

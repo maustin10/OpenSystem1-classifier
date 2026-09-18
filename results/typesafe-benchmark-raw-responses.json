@@ -1,0 +1,460 @@
+{
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "requested_model": "jev-latest",
+  "cases": [
+    {
+      "id": "sentiment_obvious",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "review": "This is the best meal I have ever eaten. Absolutely wonderful."
+        },
+        "questions": {
+          "sentiment_obvious": {
+            "type": "choice",
+            "instructions": "What sentiment does the review express?",
+            "criteria": {
+              "positive": "The review expresses praise, enjoyment, satisfaction, or a favourable opinion.",
+              "negative": "The review expresses criticism, disappointment, dislike, or an unfavourable opinion."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "sentiment_obvious": {
+            "type": "choice",
+            "choice": "positive",
+            "confidence": 1.0,
+            "probabilities": {
+              "positive": 1.0,
+              "negative": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 355,
+          "output_tokens": 35
+        }
+      }
+    },
+    {
+      "id": "arithmetic",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "expression": "2 + 2"
+        },
+        "questions": {
+          "arithmetic": {
+            "type": "choice",
+            "instructions": "What is the value of the expression?",
+            "criteria": {
+              "four": "The expression evaluates to the number 4.",
+              "seven": "The expression evaluates to the number 7.",
+              "twelve": "The expression evaluates to the number 12."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "arithmetic": {
+            "type": "choice",
+            "choice": "four",
+            "confidence": 1.0,
+            "probabilities": {
+              "twelve": 0.0,
+              "four": 1.0,
+              "seven": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 357,
+          "output_tokens": 42
+        }
+      }
+    },
+    {
+      "id": "geography_capital",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "country": "France"
+        },
+        "questions": {
+          "geography_capital": {
+            "type": "choice",
+            "instructions": "What is the capital city of this country?",
+            "criteria": {
+              "paris": "The capital city is Paris.",
+              "berlin": "The capital city is Berlin.",
+              "tokyo": "The capital city is Tokyo."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "geography_capital": {
+            "type": "choice",
+            "choice": "paris",
+            "confidence": 1.0,
+            "probabilities": {
+              "tokyo": 0.0,
+              "berlin": 0.0,
+              "paris": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 346,
+          "output_tokens": 47
+        }
+      }
+    },
+    {
+      "id": "animal_taxonomy",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "animal": "a dog with four legs that barks and wags its tail"
+        },
+        "questions": {
+          "animal_taxonomy": {
+            "type": "choice",
+            "instructions": "What kind of animal is described?",
+            "criteria": {
+              "mammal": "The animal is a mammal: warm-blooded, has fur or hair, and feeds milk to its young.",
+              "fish": "The animal is a fish: lives in water and breathes through gills.",
+              "insect": "The animal is an insect: has six legs and an exoskeleton."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "animal_taxonomy": {
+            "type": "choice",
+            "choice": "mammal",
+            "confidence": 1.0,
+            "probabilities": {
+              "fish": 0.0,
+              "insect": 0.0,
+              "mammal": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 395,
+          "output_tokens": 45
+        }
+      }
+    },
+    {
+      "id": "explicit_negation",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "statement": "The server is not running and has been completely shut down."
+        },
+        "questions": {
+          "explicit_negation": {
+            "type": "choice",
+            "instructions": "What is the current state of the server?",
+            "criteria": {
+              "stopped": "The server is not running; it is offline, stopped, or shut down.",
+              "running": "The server is running normally and is available."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "explicit_negation": {
+            "type": "choice",
+            "choice": "stopped",
+            "confidence": 1.0,
+            "probabilities": {
+              "running": 0.0,
+              "stopped": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 352,
+          "output_tokens": 37
+        }
+      }
+    },
+    {
+      "id": "temporal_order",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "events": "The package was ordered on Monday and delivered on Friday of the same week."
+        },
+        "questions": {
+          "temporal_order": {
+            "type": "choice",
+            "instructions": "Which event happened first?",
+            "criteria": {
+              "ordering": "The order was placed before the delivery occurred.",
+              "delivery": "The delivery occurred before the order was placed."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "temporal_order": {
+            "type": "choice",
+            "choice": "ordering",
+            "confidence": 1.0,
+            "probabilities": {
+              "ordering": 1.0,
+              "delivery": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 342,
+          "output_tokens": 33
+        }
+      }
+    },
+    {
+      "id": "unit_magnitude",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "comparison": "one kilometre versus one centimetre"
+        },
+        "questions": {
+          "unit_magnitude": {
+            "type": "choice",
+            "instructions": "Which distance is larger?",
+            "criteria": {
+              "kilometre": "One kilometre is the larger distance.",
+              "centimetre": "One centimetre is the larger distance."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "unit_magnitude": {
+            "type": "choice",
+            "choice": "kilometre",
+            "confidence": 1.0,
+            "probabilities": {
+              "centimetre": 0.0,
+              "kilometre": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 340,
+          "output_tokens": 40
+        }
+      }
+    },
+    {
+      "id": "spam_intent",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "email": "CONGRATULATIONS!!! You have WON $10,000,000. Send your bank details and a $500 fee to claim now!!!"
+        },
+        "questions": {
+          "spam_intent": {
+            "type": "choice",
+            "instructions": "How should this email be classified?",
+            "criteria": {
+              "spam": "The message is unsolicited spam, a scam, or a fraudulent attempt to obtain money or credentials.",
+              "legitimate": "The message is a normal, legitimate piece of correspondence."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "spam_intent": {
+            "type": "choice",
+            "choice": "spam",
+            "confidence": 1.0,
+            "probabilities": {
+              "legitimate": 0.0,
+              "spam": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 382,
+          "output_tokens": 35
+        }
+      }
+    },
+    {
+      "id": "language_id",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "text": "Bonjour, je m'appelle Marie et j'habite a Paris."
+        },
+        "questions": {
+          "language_id": {
+            "type": "choice",
+            "instructions": "In which language is the text written?",
+            "criteria": {
+              "french": "The text is written in the French language.",
+              "german": "The text is written in the German language.",
+              "japanese": "The text is written in the Japanese language."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "language_id": {
+            "type": "choice",
+            "choice": "french",
+            "confidence": 1.0,
+            "probabilities": {
+              "french": 1.0,
+              "japanese": 0.0,
+              "german": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 371,
+          "output_tokens": 45
+        }
+      }
+    },
+    {
+      "id": "physical_property",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "object": "a solid block of iron dropped into a bathtub of water"
+        },
+        "questions": {
+          "physical_property": {
+            "type": "choice",
+            "instructions": "What will the object do in water?",
+            "criteria": {
+              "sink": "The object is denser than water and will sink to the bottom.",
+              "float": "The object is less dense than water and will float on the surface."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "physical_property": {
+            "type": "choice",
+            "choice": "sink",
+            "confidence": 1.0,
+            "probabilities": {
+              "sink": 1.0,
+              "float": 0.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 351,
+          "output_tokens": 32
+        }
+      }
+    },
+    {
+      "id": "code_language",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "snippet": "def greet(name):\n    print(f'Hello, {name}')"
+        },
+        "questions": {
+          "code_language": {
+            "type": "choice",
+            "instructions": "Which programming language is this snippet written in?",
+            "criteria": {
+              "python": "The snippet is written in Python, using def and indentation-based blocks.",
+              "java": "The snippet is written in Java, using classes and curly braces.",
+              "sql": "The snippet is written in SQL, a query language for databases."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "code_language": {
+            "type": "choice",
+            "choice": "python",
+            "confidence": 1.0,
+            "probabilities": {
+              "java": 0.0,
+              "sql": 0.0,
+              "python": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 377,
+          "output_tokens": 39
+        }
+      }
+    },
+    {
+      "id": "urgency_triage",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "ticket": "Production database is completely down. All customers are unable to log in. Revenue impact ongoing."
+        },
+        "questions": {
+          "urgency_triage": {
+            "type": "choice",
+            "instructions": "What priority should this ticket receive?",
+            "criteria": {
+              "critical": "The issue is a critical outage causing widespread customer impact and requires immediate response.",
+              "low": "The issue is a minor inconvenience with no customer impact and can wait."
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "urgency_triage": {
+            "type": "choice",
+            "choice": "critical",
+            "confidence": 1.0,
+            "probabilities": {
+              "low": 0.0,
+              "critical": 1.0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 358,
+          "output_tokens": 34
+        }
+      }
+    }
+  ]
+}

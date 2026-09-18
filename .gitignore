@@ -1,0 +1,19 @@
+.env
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.DS_Store
+~$*.pptx
+
+# Model weights are downloaded locally and must not be committed.
+models/
+*.safetensors
+*.bin
+*.onnx
+
+# Private build and validation outputs.
+.codex-deck-build/
+.codex-finalizer/
+
