@@ -12,8 +12,13 @@ models/
 *.safetensors
 *.bin
 *.onnx
+*.pt
+*.pth
+*.ckpt
+*.gguf
+.huggingface/
+hf-cache/
 
 # Private build and validation outputs.
 .codex-deck-build/
 .codex-finalizer/
-

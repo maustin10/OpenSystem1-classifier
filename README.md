@@ -101,6 +101,30 @@ docs/
 
 Model weights and API credentials are intentionally excluded.
 
+## Quick start
+
+The following commands reproduce the local ModernBERT multiple-choice benchmark from a fresh clone:
+
+```bash
+git clone https://github.com/maustin10/OpenSystem1-classifier.git
+cd OpenSystem1-classifier
+
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r poc/requirements-zero-shot-decisions.txt
+python -m pip install huggingface_hub pytest
+
+mkdir -p models
+hf download MoritzLaurer/ModernBERT-large-zeroshot-v2.0 \
+  --local-dir models/modernbert-zeroshot
+
+HF_HUB_OFFLINE=1 python poc/obvious_answers_benchmark.py \
+  --model models/modernbert-zeroshot
+```
+
+The first download requires internet access and enough local disk space for the model. The `models/` directory and common model-weight formats are ignored by Git. After downloading, `HF_HUB_OFFLINE=1` ensures the benchmark uses only the local copy.
+
 ## Requirements
 
 - Python 3.10 or later
@@ -241,7 +265,10 @@ python poc/build_bfcl_routing_subset.py \
 The tests use a fake scorer and do not download ModernBERT:
 
 ```bash
-python -m pytest poc/test_zero_shot_decision_poc.py -q
+python -m pytest \
+  poc/test_zero_shot_decision_poc.py \
+  poc/test_bfcl_routing_benchmark.py \
+  -q
 ```
 
 Expected result: `15 passed`.
