@@ -1,7 +1,7 @@
 /*
 Content summary: Reorders the existing comparison deck into a smoke-test story,
-adds gate-clearance distribution statistics, adds every tool-routing result, and
-keeps implementation/API code in a final appendix.
+adds gate-clearance histograms, adds every tool-routing result, and keeps
+implementation/API code in a final appendix.
 
 Design description: Retains the source deck's 16:9 Ocean Gradient palette,
 Georgia display headings, Calibri body text, Consolas code, teal spine, editable
@@ -22,7 +22,7 @@ const simpleModernPath = path.join(workspaceDir, "results/benchmark-results.json
 const simpleTypeSafePath = path.join(workspaceDir, "results/typesafe-benchmark-results.json");
 const toolModernPath = path.join(workspaceDir, "results/bfcl-routing-modernbert-results.json");
 const toolTypeSafePath = path.join(workspaceDir, "results/bfcl-routing-typesafe-results.json");
-const finalPath = path.join(workspaceDir, "results/Smoke-Test-Comparison-System1-vs-ModernBERT-final.pptx");
+const finalPath = path.join(workspaceDir, "results/Smoke-Test-Comparison-System1-vs-ModernBERT-clearance-distributions.pptx");
 const buildDir = path.join(workspaceDir, ".codex-deck-build/smoke-test-rebuild");
 const stagingDir = path.join(workspaceDir, ".codex-finalizer");
 const skillDir = "/Users/markaustin/.codex/plugins/cache/openai-primary-runtime/presentations/26.909.12148/skills/presentations";
@@ -103,22 +103,29 @@ function chartBase() {
   };
 }
 
-function median(values) {
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-}
+const CLEARANCE_BIN_EDGES = [-0.4, -0.2, 0, 0.2, 0.4];
+const CLEARANCE_BIN_LABELS = ["−40 to −20", "−20 to 0", "0 to +20", "+20 to +40"];
 
-function clearanceStats(rows, probabilityField) {
-  const values = rows.map((row) => Math.min(
+function clearanceValues(rows, probabilityField) {
+  return rows.map((row) => Number(Math.min(
     Number(row[probabilityField]) - MIN_PROBABILITY,
     Number(row.margin) - MIN_MARGIN,
-  ));
-  return {
-    minimum: Math.min(...values),
-    median: median(values),
-    average: values.reduce((sum, value) => sum + value, 0) / values.length,
-  };
+  ).toFixed(10)));
+}
+
+function clearanceHistogram(values) {
+  const counts = Array(CLEARANCE_BIN_LABELS.length).fill(0);
+  for (const value of values) {
+    const index = CLEARANCE_BIN_EDGES.findIndex((edge, candidate) => (
+      candidate < CLEARANCE_BIN_EDGES.length - 1
+      && value >= edge
+      && (value < CLEARANCE_BIN_EDGES[candidate + 1]
+        || (candidate === counts.length - 1 && value <= CLEARANCE_BIN_EDGES[candidate + 1]))
+    ));
+    if (index < 0) throw new Error(`Clearance ${value} falls outside configured histogram bins`);
+    counts[index] += 1;
+  }
+  return counts;
 }
 
 function replaceText(slide, oldText, newText) {
@@ -167,7 +174,7 @@ function addComparisonSlide(slide, config) {
     categories: config.accuracyCategories,
     series: [
       { name: "ModernBERT NLI", values: config.modernAccuracy, valuesFormatCode: "0%", fill: C.deep, line: { style: "solid", fill: C.deep, width: 1 } },
-      { name: 'TypeSafe.ai "System1"', values: config.typeSafeAccuracy, valuesFormatCode: "0%", fill: C.typeSafe, line: { style: "solid", fill: C.typeSafe, width: 1 } },
+      { name: "TypeSafe.ai JEV", values: config.typeSafeAccuracy, valuesFormatCode: "0%", fill: C.typeSafe, line: { style: "solid", fill: C.typeSafe, width: 1 } },
     ],
     barOptions: { direction: "column", grouping: "clustered", gapWidth: 70 },
     yAxis: { visible: true, min: 0, max: 1, majorUnit: 0.25, numberFormatCode: "0%", textStyle: { typeface: FONT.body, fontSize: 11.5, fill: C.muted }, line: { style: "solid", fill: C.border, width: 1 }, majorGridlines: { style: "solid", fill: C.border, width: 1 } },
@@ -175,25 +182,25 @@ function addComparisonSlide(slide, config) {
   });
   applyPresentationChartFont(accuracyChart, { fontFamily: FONT.body });
 
-  textBox(slide, "GATE CLEARANCE DISTANCE", 625, 143, 555, 22, { fontSize: 13, bold: true, color: C.warn });
+  textBox(slide, "CONFIDENCE-GATE CLEARANCE DISTRIBUTION", 625, 143, 555, 22, { fontSize: 13, bold: true, color: C.warn });
   const gateChart = slide.charts.add("bar", {
     ...chartBase(),
     position: { left: 608, top: 171, width: 592, height: 405 },
-    categories: ["Minimum", "Median", "Average"],
+    categories: CLEARANCE_BIN_LABELS,
     series: [
-      { name: "ModernBERT NLI", values: [config.modernClearance.minimum, config.modernClearance.median, config.modernClearance.average], valuesFormatCode: "+0%;-0%;0%", fill: C.deep, line: { style: "solid", fill: C.deep, width: 1 } },
-      { name: 'TypeSafe.ai "System1"', values: [config.typeSafeClearance.minimum, config.typeSafeClearance.median, config.typeSafeClearance.average], valuesFormatCode: "+0%;-0%;0%", fill: C.typeSafe, line: { style: "solid", fill: C.typeSafe, width: 1 } },
+      { name: "ModernBERT NLI", values: clearanceHistogram(config.modernClearanceValues), valuesFormatCode: "0", fill: C.deep, line: { style: "solid", fill: C.deep, width: 1 } },
+      { name: "TypeSafe.ai JEV", values: clearanceHistogram(config.typeSafeClearanceValues), valuesFormatCode: "0", fill: C.typeSafe, line: { style: "solid", fill: C.typeSafe, width: 1 } },
     ],
-    barOptions: { direction: "column", grouping: "clustered", gapWidth: 65 },
-    xAxis: { visible: true, tickLabelPosition: "low", textStyle: { typeface: FONT.body, fontSize: 12.5, fill: C.ink }, line: { style: "solid", fill: C.border, width: 1 } },
-    yAxis: { visible: true, min: -0.4, max: 0.4, majorUnit: 0.1, numberFormatCode: "+0%;-0%;0%", textStyle: { typeface: FONT.body, fontSize: 11.5, fill: C.muted }, line: { style: "solid", fill: C.border, width: 1 }, majorGridlines: { style: "solid", fill: C.border, width: 1 } },
-    dataLabels: { showValue: true, position: "outEnd", textStyle: { typeface: FONT.body, fontSize: 12, bold: true, fill: C.ink } },
+    barOptions: { direction: "column", grouping: "clustered", gapWidth: 35 },
+    xAxis: { visible: true, tickLabelPosition: "low", textStyle: { typeface: FONT.body, fontSize: 10.5, fill: C.ink }, line: { style: "solid", fill: C.border, width: 1 } },
+    yAxis: { visible: true, min: 0, max: config.histogramMax, majorUnit: config.histogramMajorUnit, numberFormatCode: "0", textStyle: { typeface: FONT.body, fontSize: 11.5, fill: C.muted }, line: { style: "solid", fill: C.border, width: 1 }, majorGridlines: { style: "solid", fill: C.border, width: 1 } },
+    dataLabels: { showValue: true, position: "outEnd", textStyle: { typeface: FONT.body, fontSize: 11, bold: true, fill: C.ink } },
   });
   applyPresentationChartFont(gateChart, { fontFamily: FONT.body });
 
   rect(slide, 82, 610, 1098, 45, C.midnight);
-  textBox(slide, "Clearance = minimum of (top probability − 65 points) and (top-two margin − 15 points)", 102, 621, 1058, 21, { fontSize: 14.5, bold: true, color: C.white, alignment: "center" });
-  textBox(slide, "Positive values clear both gate conditions. Negative values show the shortfall on the limiting condition.", 82, 672, 1098, 21, { fontSize: 12.5, italic: true, color: C.muted, alignment: "center" });
+  textBox(slide, "Correctness checks the winner. Clearance checks whether confidence is high enough to act.", 102, 621, 1058, 21, { fontSize: 14.5, bold: true, color: C.white, alignment: "center" });
+  textBox(slide, "A correct answer can have negative clearance when top probability is below 65% or margin is below 15%.", 82, 672, 1098, 21, { fontSize: 12.5, italic: true, color: C.muted, alignment: "center" });
   slide.speakerNotes.textFrame.setText(config.notes);
 }
 
@@ -202,7 +209,7 @@ function addFindingsSlide(slide) {
   textBox(slide, "Correct score and gate clearance by use case", 82, 42, 1098, 52, {
     typeface: FONT.head, fontSize: 38, bold: true, color: C.midnight,
   });
-  textBox(slide, "Correct uses the most likely option. Gate statistics are signed percentage points from the limiting threshold.", 82, 98, 1098, 28, {
+  textBox(slide, "Correct uses the most likely option. Gate cleared counts cases at or above zero clearance.", 82, 98, 1098, 28, {
     fontSize: 17, italic: true, color: C.muted,
   });
 
@@ -214,29 +221,30 @@ function addFindingsSlide(slide) {
     const correct = rows.filter((row) => row.correct).length;
     return `${correct}/${rows.length} (${(100 * correct / rows.length).toFixed(correct === rows.length ? 0 : 1)}%)`;
   };
-  const fmtStats = (stats) => [stats.minimum, stats.median, stats.average]
-    .map((value) => `${value >= 0 ? "+" : ""}${(value * 100).toFixed(1)}`)
-    .join(" / ");
+  const fmtGate = (rows, probabilityField) => {
+    const cleared = clearanceValues(rows, probabilityField).filter((value) => value >= 0).length;
+    return `${cleared}/${rows.length} (${(100 * cleared / rows.length).toFixed(cleared === rows.length ? 0 : 1)}%)`;
+  };
   const categoryRows = [
     ["Simple multiple choice", simpleModern.cases, "confidence", simpleTypeSafe.cases, "top_probability"],
     ["Tool selection", modernToolSelection, "top_probability", typeSafeToolSelection, "top_probability"],
     ["No-tool detection", modernNoTool, "top_probability", typeSafeNoTool, "top_probability"],
     ["All tool routes", toolModern.cases, "top_probability", toolTypeSafe.cases, "top_probability"],
   ];
-  const values = [["Use case", "n", "ModernBERT correct", "ModernBERT clearance\nmin / median / avg", "TypeSafe correct", "TypeSafe clearance\nmin / median / avg"]];
+  const values = [["Use case", "n", "ModernBERT correct", "ModernBERT gate cleared", "TypeSafe.ai JEV correct", "TypeSafe.ai JEV gate cleared"]];
   for (const [label, modernRows, modernField, typeSafeRows, typeSafeField] of categoryRows) {
     values.push([
       label,
       String(modernRows.length),
       fmtCorrect(modernRows),
-      fmtStats(clearanceStats(modernRows, modernField)),
+      fmtGate(modernRows, modernField),
       fmtCorrect(typeSafeRows),
-      fmtStats(clearanceStats(typeSafeRows, typeSafeField)),
+      fmtGate(typeSafeRows, typeSafeField),
     ]);
   }
   const table = slide.tables.add({
     rows: values.length, columns: 6, left: 82, top: 158, width: 1098, height: 338,
-    columnWidths: [224, 55, 155, 245, 155, 264], values,
+    columnWidths: [224, 55, 185, 215, 185, 234], values,
   });
   table.styleOptions = { headerRow: true, bandedRows: true };
   table.borders.assign({ style: "solid", fill: C.border, width: 0.5 });
@@ -251,9 +259,9 @@ function addFindingsSlide(slide) {
   textBox(slide, "Correct score", 105, 550, 165, 20, { fontSize: 13, bold: true, color: C.deep });
   textBox(slide, "Expected option equals the highest-probability option, even when the gate would abstain.", 280, 547, 870, 25, { fontSize: 15, color: C.ink });
   textBox(slide, "Gate caveat", 105, 585, 165, 20, { fontSize: 13, bold: true, color: C.warn });
-  textBox(slide, "TypeSafe's one incorrect tool route still had +7.0 points of gate clearance.", 280, 582, 870, 25, { fontSize: 15, color: C.ink });
-  textBox(slide, "Clearance statistics are min / median / average in percentage points; positive values clear both fixed conditions.", 82, 654, 1098, 24, { fontSize: 13, bold: true, color: C.midnight, alignment: "center" });
-  slide.speakerNotes.textFrame.setText("All figures are computed from the four committed result files. Gate clearance uses the limiting signed distance to the fixed 0.65 probability and 0.15 margin thresholds.");
+  textBox(slide, "TypeSafe.ai JEV's one incorrect tool route still had +7.0 points of gate clearance.", 280, 582, 870, 25, { fontSize: 15, color: C.ink });
+  textBox(slide, "The preceding charts show the full clearance distributions in fixed 20-point bins.", 82, 654, 1098, 24, { fontSize: 13, bold: true, color: C.midnight, alignment: "center" });
+  slide.speakerNotes.textFrame.setText("All figures are computed from the four committed result files. Gate clearance uses the limiting signed distance to the fixed 0.65 probability and 0.15 margin thresholds. Distribution charts use fixed 20-percentage-point bins from -40 to +40.");
 }
 
 function addProtocolSlide(slide) {
@@ -288,7 +296,7 @@ function addToolResultsSlide(slide, pairs, first, last) {
   textBox(slide, `Tool calling results ${first + 1}–${last}`, 82, 42, 1098, 52, { typeface: FONT.head, fontSize: 38, bold: true, color: C.midnight });
   textBox(slide, "Top-ranked route for every BFCL-derived case", 82, 98, 1098, 27, { fontSize: 17, italic: true, color: C.muted });
   const rows = pairs.slice(first, last);
-  const values = [["Case", "Expected route", "ModernBERT route", "p / margin", "TypeSafe route", "p / margin", "Correct"]];
+  const values = [["Case", "Expected route", "ModernBERT route", "p / margin", "TypeSafe.ai JEV route", "p / margin", "Correct"]];
   for (const { modern, typeSafe } of rows) {
     values.push([
       modern.source_id,
@@ -317,7 +325,7 @@ function addToolResultsSlide(slide, pairs, first, last) {
     table.getCell(row, 6).text.color = modern.correct && typeSafe.correct ? C.pass : C.fail;
     table.getCell(row, 6).text.bold = true;
   });
-  textBox(slide, "Correct column reports ModernBERT / TypeSafe. Full schemas and probability distributions remain in the JSON artifacts.", 82, 661, 1098, 22, { fontSize: 12.5, italic: true, color: C.muted, alignment: "center" });
+  textBox(slide, "Correct column reports ModernBERT / TypeSafe.ai JEV. Full schemas and probability distributions remain in the JSON artifacts.", 82, 661, 1098, 22, { fontSize: 12.5, italic: true, color: C.muted, alignment: "center" });
   slide.speakerNotes.textFrame.setText("Sources: results/bfcl-routing-modernbert-results.json and results/bfcl-routing-typesafe-results.json.");
 }
 
@@ -390,36 +398,43 @@ const appendixB1 = original[25];
 const appendixB2 = original[26];
 
 addCover(cover);
-const simpleModernClearance = clearanceStats(simpleModern.cases, "confidence");
-const simpleTypeSafeClearance = clearanceStats(simpleTypeSafe.cases, "top_probability");
+const simpleModernClearance = clearanceValues(simpleModern.cases, "confidence");
+const simpleTypeSafeClearance = clearanceValues(simpleTypeSafe.cases, "top_probability");
 addComparisonSlide(simpleChart, {
   title: "Simple multiple-choice classification",
   subtitle: "12 obvious-answer cases with identical choices and a fixed gate",
   accuracyCategories: ["Accuracy"],
   modernAccuracy: [simpleModern.cases.filter((row) => row.correct).length / simpleModern.cases.length],
   typeSafeAccuracy: [simpleTypeSafe.cases.filter((row) => row.correct).length / simpleTypeSafe.cases.length],
-  modernClearance: simpleModernClearance,
-  typeSafeClearance: simpleTypeSafeClearance,
-  notes: "Sources: results/benchmark-results.json and results/typesafe-benchmark-results.json. Clearance uses the signed distance from the limiting gate condition.",
+  modernClearanceValues: simpleModernClearance,
+  typeSafeClearanceValues: simpleTypeSafeClearance,
+  histogramMax: 12,
+  histogramMajorUnit: 2,
+  notes: "Sources: results/benchmark-results.json and results/typesafe-benchmark-results.json. Clearance uses the signed distance from the limiting gate condition. Histogram bins are 20 percentage points wide.",
 });
-const toolModernClearance = clearanceStats(toolModern.cases, "top_probability");
-const toolTypeSafeClearance = clearanceStats(toolTypeSafe.cases, "top_probability");
+const toolModernClearance = clearanceValues(toolModern.cases, "top_probability");
+const toolTypeSafeClearance = clearanceValues(toolTypeSafe.cases, "top_probability");
 addComparisonSlide(toolChart, {
   title: "Tool calling test",
   subtitle: "30 BFCL-derived cases covering tool selection and no-tool detection",
   accuracyCategories: ["Overall", "Tool selection", "No-tool recall"],
   modernAccuracy: [toolModern.summary.accuracy, toolModern.summary.selection_accuracy, toolModern.summary.no_tool_recall],
   typeSafeAccuracy: [toolTypeSafe.summary.accuracy, toolTypeSafe.summary.selection_accuracy, toolTypeSafe.summary.no_tool_recall],
-  modernClearance: toolModernClearance,
-  typeSafeClearance: toolTypeSafeClearance,
-  notes: "Sources: results/bfcl-routing-modernbert-results.json and results/bfcl-routing-typesafe-results.json. This derived subset is not an official BFCL leaderboard score.",
+  modernClearanceValues: toolModernClearance,
+  typeSafeClearanceValues: toolTypeSafeClearance,
+  histogramMax: 30,
+  histogramMajorUnit: 5,
+  notes: "Sources: results/bfcl-routing-modernbert-results.json and results/bfcl-routing-typesafe-results.json. Histogram bins are 20 percentage points wide. This derived subset is not an official BFCL leaderboard score.",
 });
 addFindingsSlide(findings);
 addProtocolSlide(protocol);
 replaceText(method, "Same questions, two scorers", "Two classifier paths");
 replaceText(method, "Each path receives the identical state, question, and multiple-choice definitions", "Both paths receive the same state, question, and declared options");
+replaceText(method, "Jev 1.13.0", "JEV 1.13.0");
 replaceText(scope, "What Stage 1 measures", "Tool calling architecture and scope");
 replaceText(scope, "A fair classifier comparison now; AST and executable scoring later", "Routing is measured now. Argument extraction and execution remain separate stages.");
+replaceText(scope, "TypeSafe", "TypeSafe.ai JEV");
+scope.tables.items[0].getCell(0, 3).value = "TypeSafe.ai JEV";
 replaceText(pipeline, "Appendix A4 · ModernBERT pipeline + Mermaid source", "ModernBERT decision pipeline");
 replaceText(alternatives, "Other zero-shot classifiers worth benchmarking", "Appendix D · Other zero-shot classifiers");
 
@@ -497,6 +512,6 @@ const result = await finalizePresentation({
     referenceSha256: sourceSha256,
   },
   verifyArtifactToolImport: true,
-  receiptPath: path.join(stagingDir, "Smoke-Test-Comparison-System1-vs-ModernBERT-final.validation.json"),
+  receiptPath: path.join(stagingDir, "Smoke-Test-Comparison-System1-vs-ModernBERT-clearance-distributions-v6.validation.json"),
 });
 console.log(JSON.stringify({ finalPath, result }, null, 2));

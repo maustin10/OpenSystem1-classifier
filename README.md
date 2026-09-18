@@ -3,13 +3,13 @@
 An experiment comparing two non-generative, zero-shot ways to make typed decisions over structured state:
 
 1. A local Natural Language Inference classifier using [ModernBERT-large-zeroshot-v2.0](https://huggingface.co/MoritzLaurer/ModernBERT-large-zeroshot-v2.0).
-2. The hosted [TypeSafe System One API](https://docs.typesafe.ai/api), using Jev.
+2. The hosted [TypeSafe System One API](https://docs.typesafe.ai/api), using the TypeSafe.ai JEV model.
 
 Both implementations answer the same 12 multiple-choice questions. They return only declared options and probability distributions. Neither path generates an unrestricted answer.
 
 ## Benchmark result
 
-| Measure | ModernBERT NLI | TypeSafe Jev 1.13.0 |
+| Measure | ModernBERT NLI | TypeSafe.ai JEV 1.13.0 |
 |---|---:|---:|
 | Correct top-ranked answers | 12/12 | 12/12 |
 | Cleared the shared decision gate | 5/12 | 12/12 |
@@ -25,18 +25,20 @@ min(top_probability - 0.65, top_two_margin - 0.15)
 ```
 
 Positive values clear both conditions. Negative values report the shortfall on
-the limiting condition. Minimum, median, and average clearance are summarized
-alongside top-ranked correctness for each use-case category.
+the limiting condition. Accuracy and clearance measure different things: a
+top-ranked answer can be correct while still falling below the probability or
+margin required for automatic action. The charts show the full distribution in
+fixed 20-percentage-point bins.
 
-TypeSafe returned literal `1.0` / `0.0` probability distributions and `confidence: 1.0` for all 12 cases. The client did not round or threshold those responses. The POC calculates the top-two margin locally after receiving the API response. This easy benchmark demonstrates separation on gate clearance, but it does not establish real-world calibration.
+TypeSafe.ai JEV returned literal `1.0` / `0.0` probability distributions and `confidence: 1.0` for all 12 cases. The client did not round or threshold those responses. The POC calculates the top-two margin locally after receiving the API response. This easy benchmark demonstrates separation on gate clearance, but it does not establish real-world calibration.
 
-![Simple multiple-choice classification results comparing ModernBERT and TypeSafe accuracy and gate clearance](docs/images/simple-multiple-choice-results.png)
+![Simple multiple-choice accuracy and gate-clearance histograms comparing ModernBERT and TypeSafe.ai JEV](docs/images/simple-multiple-choice-results.png)
 
 The original 12-question presentation is in
 [`results/OpenSystem1-classifier-comparison.pptx`](results/OpenSystem1-classifier-comparison.pptx).
-The current smoke-test deck, including the BFCL-derived Stage-1 results and
-category-level gate statistics, is
-[`results/Smoke-Test-Comparison-System1-vs-ModernBERT-final.pptx`](results/Smoke-Test-Comparison-System1-vs-ModernBERT-final.pptx).
+The current smoke-test deck, including the BFCL-derived Stage-1 results,
+clearance histograms, and category-level gate counts, is
+[`results/Smoke-Test-Comparison-System1-vs-ModernBERT-clearance-distributions.pptx`](results/Smoke-Test-Comparison-System1-vs-ModernBERT-clearance-distributions.pptx).
 
 ## Stage 1: BFCL-derived tool routing
 
@@ -45,14 +47,14 @@ perform fairly: select one declared tool, or determine that no supplied tool is
 callable. It uses 30 cases derived from the official BFCL V4 data at commit
 `6ea57973c7a6097fd7c5915698c54c17c5b1b6c8`:
 
-| Measure | ModernBERT NLI | TypeSafe Jev 1.13.0 |
+| Measure | ModernBERT NLI | TypeSafe.ai JEV 1.13.0 |
 |---|---:|---:|
 | Overall routing accuracy | 23/30 (76.7%) | 29/30 (96.7%) |
 | Multiple-function selection | 17/20 (85%) | 20/20 (100%) |
 | No-tool detection | 6/10 (60%) | 9/10 (90%) |
 | Cleared the unchanged decision gate | 0/30 | 30/30 |
 
-The TypeSafe responses were not uniformly `1.0` on this harder set: 25 of 30
+The TypeSafe.ai JEV responses were not uniformly `1.0` on this harder set: 25 of 30
 had a top probability of `1.0`; the remaining five ranged from `0.70` to `0.97`.
 Its one wrong route still cleared the gate at `0.72`, which is a useful reminder
 that thresholding controls abstention rather than guaranteeing correctness.
@@ -63,11 +65,11 @@ generation and execution, which neither classifier performs by itself. See
 [`docs/bfcl-routing-benchmark.md`](docs/bfcl-routing-benchmark.md) for the
 protocol and interpretation.
 
-![BFCL-derived tool-routing results comparing ModernBERT and TypeSafe](docs/images/tool-calling-results.png)
+![BFCL-derived tool-routing accuracy and gate-clearance histograms comparing ModernBERT and TypeSafe.ai JEV](docs/images/tool-calling-results.png)
 
 ## Architecture
 
-Both classifier paths receive the same state, question, and declared options. ModernBERT runs locally and scores premise/hypothesis pairs. TypeSafe sends a typed choice question to the hosted System One API.
+Both classifier paths receive the same state, question, and declared options. ModernBERT runs locally and scores premise/hypothesis pairs. TypeSafe.ai JEV receives a typed choice question through the hosted System One API.
 
 ![ModernBERT and TypeSafe classifier architecture](docs/images/classifier-architecture.png)
 
@@ -83,7 +85,7 @@ poc/
   bfcl_routing_benchmark.py       Shared ModernBERT / TypeSafe routing runner
   test_bfcl_routing_benchmark.py  Dataset and metric tests
   update_deck_bfcl_routing.mjs    Editable PowerPoint update
-  rebuild_smoke_test_deck.mjs     Reordered smoke-test deck and gate statistics
+  rebuild_smoke_test_deck.mjs     Reordered smoke-test deck and clearance histograms
   zero_shot_decision_poc.py       Local typed decision engine
   obvious_answers_benchmark.py    Shared 12-question benchmark
   typesafe_decision_poc.py        TypeSafe HTTP client
@@ -100,7 +102,7 @@ results/
   modernbert-benchmark-results.pptx
   OpenSystem1-classifier-comparison.pptx
   OpenSystem1-classifier-comparison-stage1.pptx
-  Smoke-Test-Comparison-System1-vs-ModernBERT-final.pptx
+  Smoke-Test-Comparison-System1-vs-ModernBERT-clearance-distributions.pptx
   bfcl-routing-modernbert-results.json
   bfcl-routing-typesafe-results.json
   bfcl-routing-typesafe-raw-responses.json
