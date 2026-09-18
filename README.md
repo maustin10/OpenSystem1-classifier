@@ -18,12 +18,23 @@ Both implementations answer the same 12 multiple-choice questions. They return o
 
 The shared gate requires a top probability of at least `0.65` and a top-two margin of at least `0.15`.
 
+The presentation also reports a signed gate-clearance distance for each case:
+
+```text
+min(top_probability - 0.65, top_two_margin - 0.15)
+```
+
+Positive values clear both conditions. Negative values report the shortfall on
+the limiting condition. Minimum, median, and average clearance are summarized
+alongside top-ranked correctness for each use-case category.
+
 TypeSafe returned literal `1.0` / `0.0` probability distributions and `confidence: 1.0` for all 12 cases. The client did not round or threshold those responses. The POC calculates the top-two margin locally after receiving the API response. This easy benchmark demonstrates separation on gate clearance, but it does not establish real-world calibration.
 
 The original 12-question presentation is in
 [`results/OpenSystem1-classifier-comparison.pptx`](results/OpenSystem1-classifier-comparison.pptx).
-The current deck, including the BFCL-derived Stage-1 results, is
-[`results/OpenSystem1-classifier-comparison-stage1.pptx`](results/OpenSystem1-classifier-comparison-stage1.pptx).
+The current smoke-test deck, including the BFCL-derived Stage-1 results and
+category-level gate statistics, is
+[`results/Smoke-Test-Comparison-System1-vs-ModernBERT-final.pptx`](results/Smoke-Test-Comparison-System1-vs-ModernBERT-final.pptx).
 
 ## Stage 1: BFCL-derived tool routing
 
@@ -58,6 +69,7 @@ poc/
   bfcl_routing_benchmark.py       Shared ModernBERT / TypeSafe routing runner
   test_bfcl_routing_benchmark.py  Dataset and metric tests
   update_deck_bfcl_routing.mjs    Editable PowerPoint update
+  rebuild_smoke_test_deck.mjs     Reordered smoke-test deck and gate statistics
   zero_shot_decision_poc.py       Local typed decision engine
   obvious_answers_benchmark.py    Shared 12-question benchmark
   typesafe_decision_poc.py        TypeSafe HTTP client
@@ -74,6 +86,7 @@ results/
   modernbert-benchmark-results.pptx
   OpenSystem1-classifier-comparison.pptx
   OpenSystem1-classifier-comparison-stage1.pptx
+  Smoke-Test-Comparison-System1-vs-ModernBERT-final.pptx
   bfcl-routing-modernbert-results.json
   bfcl-routing-typesafe-results.json
   bfcl-routing-typesafe-raw-responses.json
