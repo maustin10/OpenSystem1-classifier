@@ -1,6 +1,6 @@
 # OpenSystem1 Classifier
 
-An experiment by **Mark Austin** comparing two non-generative, zero-shot ways to make typed decisions over structured state:
+An experiment comparing two non-generative, zero-shot ways to make typed decisions over structured state:
 
 1. A local Natural Language Inference classifier using [ModernBERT-large-zeroshot-v2.0](https://huggingface.co/MoritzLaurer/ModernBERT-large-zeroshot-v2.0).
 2. The hosted [TypeSafe System One API](https://docs.typesafe.ai/api), using Jev.
