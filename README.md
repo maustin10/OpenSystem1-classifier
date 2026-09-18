@@ -30,6 +30,8 @@ alongside top-ranked correctness for each use-case category.
 
 TypeSafe returned literal `1.0` / `0.0` probability distributions and `confidence: 1.0` for all 12 cases. The client did not round or threshold those responses. The POC calculates the top-two margin locally after receiving the API response. This easy benchmark demonstrates separation on gate clearance, but it does not establish real-world calibration.
 
+![Simple multiple-choice classification results comparing ModernBERT and TypeSafe accuracy and gate clearance](docs/images/simple-multiple-choice-results.png)
+
 The original 12-question presentation is in
 [`results/OpenSystem1-classifier-comparison.pptx`](results/OpenSystem1-classifier-comparison.pptx).
 The current smoke-test deck, including the BFCL-derived Stage-1 results and
@@ -60,6 +62,18 @@ score**. Official AST and executable evaluation also requires argument
 generation and execution, which neither classifier performs by itself. See
 [`docs/bfcl-routing-benchmark.md`](docs/bfcl-routing-benchmark.md) for the
 protocol and interpretation.
+
+![BFCL-derived tool-routing results comparing ModernBERT and TypeSafe](docs/images/tool-calling-results.png)
+
+## Architecture
+
+Both classifier paths receive the same state, question, and declared options. ModernBERT runs locally and scores premise/hypothesis pairs. TypeSafe sends a typed choice question to the hosted System One API.
+
+![ModernBERT and TypeSafe classifier architecture](docs/images/classifier-architecture.png)
+
+The Stage-1 tool benchmark measures routing only. Argument extraction and execution remain separate stages required for a full BFCL evaluation.
+
+![Tool-calling benchmark architecture and evaluation scope](docs/images/tool-calling-architecture.png)
 
 ## Repository layout
 
