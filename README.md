@@ -1,37 +1,59 @@
 # OpenSystem1 Classifier
 
-An independent smoke test of TypeSafe.ai JEV's newly published System One claims
-against a local classifier we already know: ModernBERT NLI. The comparison uses
-two non-generative, zero-shot ways to make typed decisions over structured state:
+This repo represents an independent smoke test comparing TypeSafe.ai JEV with a
+traditional zero-shot ModernBERT classifier on simple multiple-choice
+classification and BFCL-derived tool routing.
+
+Both are non-generative decision systems in this experiment:
 
 1. A local Natural Language Inference classifier using [ModernBERT-large-zeroshot-v2.0](https://huggingface.co/MoritzLaurer/ModernBERT-large-zeroshot-v2.0).
-2. The hosted [TypeSafe System One API](https://docs.typesafe.ai/api), using the TypeSafe.ai JEV model.
+2. The hosted [TypeSafe System One API](https://docs.typesafe.ai/api), using JEV 1.13.0.
 
-Both implementations answer the same 12 multiple-choice questions. They return only declared options and probability distributions. Neither path generates an unrestricted answer.
+Both receive the same state, question, and declared choices. Both return a
+selected option and a probability distribution rather than unrestricted prose.
 
-## Why this comparison now
+## The classification pattern predates JEV
 
-On September 14, 2026, TypeSafe.ai [announced JEV in early access](https://typesafe.ai/blog/introducing-system-one-models-and-jev),
-describing it as the first of its System One models: models specialized for
-fast, typed decisions rather than open-ended text generation. The current
-[model documentation](https://docs.typesafe.ai/models) identifies the tested
-version as JEV 1.13.0.
+JEV is new, but constrained classification is not. Since the original
+[BERT paper](https://arxiv.org/abs/1810.04805), encoder models have commonly
+been adapted to classify inputs or score a fixed set of candidate labels without
+generating an answer token by token. The ModernBERT baseline used here turns
+each candidate into an NLI hypothesis, scores all candidates in one batched
+forward pass, and applies a softmax across the options.
 
-The announcement makes four practical claims worth testing. The language below
-summarizes TypeSafe.ai's claims; it is not an independent endorsement.
+![ModernBERT decision pipeline: state, question, and option descriptions are converted into premise-hypothesis pairs, scored in one forward pass, normalized, and optionally gated](docs/images/modernbert-decision-pipeline.png)
 
-| Claim | What TypeSafe.ai publishes | What this repository tests |
+*The 5/12 answer and 7/12 review counts in the diagram describe the optional
+probability-and-margin abstention gate, not accuracy. ModernBERT's top-ranked
+choice was correct on all 12 simple cases.*
+
+This similarity in task shape motivates the comparison; it does **not** imply
+that JEV is a BERT model. TypeSafe.ai describes JEV as a new architecture with a
+parallel sampler and a training method called Reinforcement Learning for
+Calibrated Decisions. It is designed for typed decisions inside software rather
+than general-purpose text generation.
+
+## JEV and ModernBERT compared
+
+| Dimension | ModernBERT NLI baseline | TypeSafe.ai JEV 1.13.0 |
 |---|---|---|
-| Process decisions all at once | A single state can be evaluated against multiple independent typed questions in one request, with the outputs computed in parallel. The [primitives documentation](https://docs.typesafe.ai/primitives) says adding questions barely changes latency beyond their input-token cost. | The current smoke tests validate typed outputs and probabilities. Because each benchmark case has its own state, they do **not yet** independently verify the one-state/many-question fan-out claim. |
-| Fast | The launch post reports typical latency of 70–500 ms and claims 40–200× faster responses for comparable System One queries. | Raw request latency is captured, but this is not yet a controlled, hardware-normalized latency benchmark against local ModernBERT. |
-| Cheap | The published price is $0.042 per million input tokens, with no output-token charge. The launch post also reports a much larger workflow-level saving under its stated methodology. | Token use is recorded for JEV. This repository does not treat the vendor's workflow-level cost multiple as independently reproduced. |
-| High quality | TypeSafe.ai claims intelligence comparable to existing LLMs on tasks shaped as System One decisions, with structured probability outputs. | We directly test top-ranked correctness, distance from the correct answer, and top-two separation on 12 multiple-choice and 30 BFCL-derived routing cases. This is evidence for these cases, not a general quality or calibration claim. |
+| Model approach | Open-weight ModernBERT encoder with an NLI entailment head | TypeSafe.ai System One model exposed through a hosted API |
+| Deployment | Runs locally on CPU, GPU, or Apple Silicon | Runs through the TypeSafe.ai service |
+| Input construction | Builds one premise/hypothesis pair for every candidate option | Sends state plus one or more typed questions and declared answer choices |
+| Decision computation | Scores the candidate pairs in one batched forward pass, then applies cross-option softmax | Returns typed decisions; the API supports evaluating multiple questions over the same state in one request |
+| Output | Locally calculated option probabilities, top choice, margin, and optional abstention | Declared choice, probability distribution, and confidence returned by the API |
+| Free-form generation | None | None |
+| Model access | Downloadable checkpoint under Apache-2.0 | Hosted early-access model; weights are not distributed with this repository |
+| Cost model | No per-token API charge; infrastructure cost depends on local hardware | Published price: $0.042 per million input tokens and no output-token charge |
+| Latency | Depends on local hardware and batch size | TypeSafe.ai publishes a 70–500 ms operating range; this repo does not make a controlled latency comparison |
+| Simple multiple choice | 12/12 correct; 38.4% average top-two margin | 12/12 correct; 100.0% average top-two margin |
+| BFCL-derived tool routing | 23/30 correct (76.7%) | 29/30 correct (96.7%) |
 
-ModernBERT provides a useful known baseline: it is a local, inspectable encoder
-classifier that can rank natural-language labels without generating text. The
-question here is deliberately narrow: when both systems are asked to make the
-same constrained decision, does JEV's quality hold up, and what do its reported
-probabilities look like beside the established local approach?
+The JEV interface and operating figures above come from TypeSafe.ai's
+[launch announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev),
+[model documentation](https://docs.typesafe.ai/models), and
+[question primitives](https://docs.typesafe.ai/primitives). The benchmark rows
+come from the committed result files in this repository.
 
 ## Benchmark result
 
