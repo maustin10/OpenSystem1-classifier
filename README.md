@@ -20,12 +20,44 @@ The shared gate requires a top probability of at least `0.65` and a top-two marg
 
 TypeSafe returned literal `1.0` / `0.0` probability distributions and `confidence: 1.0` for all 12 cases. The client did not round or threshold those responses. The POC calculates the top-two margin locally after receiving the API response. This easy benchmark demonstrates separation on gate clearance, but it does not establish real-world calibration.
 
-The presentation is in [`results/OpenSystem1-classifier-comparison.pptx`](results/OpenSystem1-classifier-comparison.pptx).
+The original 12-question presentation is in
+[`results/OpenSystem1-classifier-comparison.pptx`](results/OpenSystem1-classifier-comparison.pptx).
+The current deck, including the BFCL-derived Stage-1 results, is
+[`results/OpenSystem1-classifier-comparison-stage1.pptx`](results/OpenSystem1-classifier-comparison-stage1.pptx).
+
+## Stage 1: BFCL-derived tool routing
+
+The second benchmark isolates the part of tool calling that both classifiers can
+perform fairly: select one declared tool, or determine that no supplied tool is
+callable. It uses 30 cases derived from the official BFCL V4 data at commit
+`6ea57973c7a6097fd7c5915698c54c17c5b1b6c8`:
+
+| Measure | ModernBERT NLI | TypeSafe Jev 1.13.0 |
+|---|---:|---:|
+| Overall routing accuracy | 23/30 (76.7%) | 29/30 (96.7%) |
+| Multiple-function selection | 17/20 (85%) | 20/20 (100%) |
+| No-tool detection | 6/10 (60%) | 9/10 (90%) |
+| Cleared the unchanged decision gate | 0/30 | 30/30 |
+
+The TypeSafe responses were not uniformly `1.0` on this harder set: 25 of 30
+had a top probability of `1.0`; the remaining five ranged from `0.70` to `0.97`.
+Its one wrong route still cleared the gate at `0.72`, which is a useful reminder
+that thresholding controls abstention rather than guaranteeing correctness.
+
+This is a **BFCL-derived routing benchmark, not an official BFCL leaderboard
+score**. Official AST and executable evaluation also requires argument
+generation and execution, which neither classifier performs by itself. See
+[`docs/bfcl-routing-benchmark.md`](docs/bfcl-routing-benchmark.md) for the
+protocol and interpretation.
 
 ## Repository layout
 
 ```text
 poc/
+  build_bfcl_routing_subset.py    Reproducible extraction from official BFCL data
+  bfcl_routing_benchmark.py       Shared ModernBERT / TypeSafe routing runner
+  test_bfcl_routing_benchmark.py  Dataset and metric tests
+  update_deck_bfcl_routing.mjs    Editable PowerPoint update
   zero_shot_decision_poc.py       Local typed decision engine
   obvious_answers_benchmark.py    Shared 12-question benchmark
   typesafe_decision_poc.py        TypeSafe HTTP client
@@ -41,7 +73,15 @@ results/
   typesafe-benchmark-raw-responses.json
   modernbert-benchmark-results.pptx
   OpenSystem1-classifier-comparison.pptx
+  OpenSystem1-classifier-comparison-stage1.pptx
+  bfcl-routing-modernbert-results.json
+  bfcl-routing-typesafe-results.json
+  bfcl-routing-typesafe-raw-responses.json
+data/
+  bfcl-routing-subset.json
+  README.md
 docs/
+  bfcl-routing-benchmark.md
   linkedin-post.md
   zero-shot-alternatives.md
 ```
@@ -149,6 +189,40 @@ python poc/typesafe_decision_poc.py \
 
 The raw audit file records request and response JSON but never stores the API key. Use `--dry-run` to inspect the payload without calling the service.
 
+## Run the BFCL-derived routing benchmark
+
+The 30-case dataset is committed, so rebuilding it is optional. Run the local
+model with:
+
+```bash
+HF_HUB_OFFLINE=1 python poc/bfcl_routing_benchmark.py \
+  --backend modernbert \
+  --dataset data/bfcl-routing-subset.json \
+  --model models/modernbert-zeroshot \
+  --output results/bfcl-routing-modernbert-results-new.json
+```
+
+Run TypeSafe with:
+
+```bash
+python poc/bfcl_routing_benchmark.py \
+  --backend typesafe \
+  --dataset data/bfcl-routing-subset.json \
+  --env-file .env \
+  --output results/bfcl-routing-typesafe-results-new.json \
+  --raw-output results/bfcl-routing-typesafe-raw-responses-new.json
+```
+
+To regenerate the subset from the exact official source revision:
+
+```bash
+git clone https://github.com/ShishirPatil/gorilla.git ../gorilla
+git -C ../gorilla checkout 6ea57973c7a6097fd7c5915698c54c17c5b1b6c8
+python poc/build_bfcl_routing_subset.py \
+  --bfcl-data-dir ../gorilla/berkeley-function-call-leaderboard/bfcl_eval/data \
+  --output data/bfcl-routing-subset.json
+```
+
 ## Run the tests
 
 The tests use a fake scorer and do not download ModernBERT:
@@ -157,7 +231,7 @@ The tests use a fake scorer and do not download ModernBERT:
 python -m pytest poc/test_zero_shot_decision_poc.py -q
 ```
 
-Expected result: `13 passed`.
+Expected result: `15 passed`.
 
 ## Other zero-shot models to benchmark
 
